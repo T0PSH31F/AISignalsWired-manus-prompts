@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aisignals-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=\${NODE_ENV}
+      - DATABASE_URL=\${DATABASE_URL}
+      - JWT_SECRET=\${JWT_SECRET}
+      - STRIPE_SECRET_KEY=\${STRIPE_SECRET_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - aisignals-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aisignals-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - VITE_API_URL=\${BACKEND_URL}
+      - VITE_STRIPE_PUBLIC_KEY=\${STRIPE_PUBLIC_KEY}
+    restart: unless-stopped
+    networks:
+      - aisignals-network
+    depends_on:
+      - backend
+
+  # Signal Generation Engine
+  signal-engine:
+    build:
+      context: ./signal-engine
+      dockerfile: Dockerfile
+    container_name: aisignals-engine
+    environment:
+      - NODE_ENV=\${NODE_ENV}
+      - DATABASE_URL=\${DATABASE_URL}
+      - COINGECKO_API_KEY=\${COINGECKO_API_KEY}
+      - ALPHAVANTAGE_API_KEY=\${ALPHAVANTAGE_API_KEY}
+      - DISCORD_WEBHOOK_URL=\${DISCORD_WEBHOOK_URL}
+      - SENDGRID_API_KEY=\${SENDGRID_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - backend
+    restart: unless-stopped
+    volumes:
+      - ./signal-engine/logs:/app/logs
+    networks:
+      - aisignals-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: aisignals-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - aisignals-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  aisignals-network:
+    driver: bridge

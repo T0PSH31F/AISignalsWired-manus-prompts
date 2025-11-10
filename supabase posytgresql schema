@@ -1,0 +1,43 @@
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  passwordhash TEXT NOT NULL,
+  subscriptiontier TEXT CHECK (subscriptiontier IN ('free', 'basic', 'premium', 'elite')) NOT NULL DEFAULT 'free',
+  stripecustomerid TEXT,
+  apikey UUID UNIQUE,
+  discordwebhook TEXT,
+  createdat TIMESTAMPTZ DEFAULT NOW(),
+  emailverified BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset TEXT NOT NULL, -- e.g. BTCUSD
+  action TEXT CHECK (action IN ('BUY', 'SELL')) NOT NULL,
+  strategytype TEXT NOT NULL, -- e.g. RSI Breadth, MACD Crossover
+  entryprice NUMERIC(20, 8) NOT NULL,
+  takeprofit NUMERIC(20, 8),
+  stoploss NUMERIC(20, 8),
+  confidence FLOAT, -- confidence score 0-1
+  rationale TEXT,
+  generated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_signals_asset ON signals(asset);
+CREATE INDEX idx_signals_strategytype ON signals(strategytype);
+
+CREATE TABLE user_signals (
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
+  delivered_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, signal_id)
+);
+
+CREATE TABLE subscription_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  event_type TEXT,
+  event_info JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
