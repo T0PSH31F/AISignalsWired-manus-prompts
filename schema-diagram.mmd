@@ -1,0 +1,61 @@
+erDiagram
+    users ||--o{ subscriptions : "has"
+    users ||--o{ signals : "receives"
+    signals }o--|| strategy_performance : "tracked_by"
+
+    users {
+        int id PK "Auto-increment primary key"
+        varchar openId UK "Manus OAuth identifier"
+        text name "User display name"
+        varchar email "User email address"
+        varchar loginMethod "OAuth login method"
+        enum role "user or admin"
+        timestamp createdAt "Account creation timestamp"
+        timestamp updatedAt "Last update timestamp"
+        timestamp lastSignedIn "Last login timestamp"
+    }
+
+    signals {
+        int id PK "Auto-increment primary key"
+        varchar asset "Trading pair (e.g., BTC/USD)"
+        enum action "BUY or SELL"
+        varchar entryPrice "Signal entry price"
+        varchar stopLoss "Stop loss price"
+        varchar takeProfit "Take profit price"
+        int confidenceScore "0-100 confidence level"
+        text rationale "Strategy reasoning"
+        enum strategyType "rsiBET, macdCrossover, temaMomentum"
+        enum status "pending, active, closed"
+        varchar exitPrice "Actual exit price (nullable)"
+        timestamp exitedAt "Exit timestamp (nullable)"
+        enum tier "free, basic, premium, elite"
+        timestamp createdAt "Signal generation timestamp"
+    }
+
+    strategy_performance {
+        int id PK "Auto-increment primary key"
+        enum strategyType UK "rsiBET, macdCrossover, temaMomentum"
+        int totalSignals "Total signals generated"
+        int winningSignals "Signals that hit take profit"
+        int losingSignals "Signals that hit stop loss"
+        varchar winRate7d "7-day win rate percentage"
+        varchar winRate30d "30-day win rate percentage"
+        varchar avgReturn "Average return percentage"
+        boolean isActive "Strategy enabled/disabled"
+        timestamp lastSignalAt "Last signal generation time"
+        timestamp updatedAt "Last metrics update"
+    }
+
+    subscriptions {
+        int id PK "Auto-increment primary key"
+        int userId FK "Reference to users.id"
+        enum tier "free, basic, premium, elite"
+        varchar stripeCustomerId "Stripe customer ID (nullable)"
+        varchar stripeSubscriptionId "Stripe subscription ID (nullable)"
+        boolean emailNotifications "Email alerts enabled"
+        text discordWebhook "Discord webhook URL (nullable)"
+        int dailySignalCount "Signals received today"
+        timestamp lastResetAt "Daily counter reset time"
+        timestamp createdAt "Subscription creation time"
+        timestamp updatedAt "Last update time"
+    }
